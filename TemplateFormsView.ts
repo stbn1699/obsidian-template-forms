@@ -263,9 +263,9 @@ export default class TemplateFormsModal extends Modal {
       cls: "mod-cta",
     });
 
-    form.addEventListener("submit", async (event) => {
+	form.addEventListener("submit", (event) => {
       event.preventDefault();
-      await this.saveTemplate();
+      void this.saveTemplate();
     });
   }
 
@@ -488,9 +488,9 @@ export default class TemplateFormsModal extends Modal {
       cls: "mod-cta",
     });
 
-    form.addEventListener("submit", async (event) => {
+    form.addEventListener("submit", (event) => {
       event.preventDefault();
-      await this.createNoteFromTemplate(template, filenameInput.value || template.name, form);
+      void this.createNoteFromTemplate(template, filenameInput.value || template.name, form);
     });
   }
 
