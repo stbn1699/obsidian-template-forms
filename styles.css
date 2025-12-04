@@ -1,71 +1,106 @@
 .template-forms-root {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.template-card {
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--background-modifier-border);
-  background: var(--background-secondary);
-  box-shadow: var(--shadow-s);
-}
-
-.template-card h3 {
-  margin: 0 0 4px;
-}
-
-.template-card p {
-  margin: 0 0 8px;
-}
-
-.template-card button {
-  margin-top: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
 .template-form-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.template-card {
+	padding: 12px;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	box-shadow: var(--shadow-s);
+}
+
+.template-card h3 {
+	margin: 0 0 4px;
+}
+
+.template-card p {
+	margin: 0 0 8px;
+}
+
+.template-card button {
+	margin-top: 4px;
 }
 
 .template-form-modal {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 360px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 360px;
 }
 
 .template-form-modal__header h3 {
-  margin-bottom: 4px;
+	margin-bottom: 4px;
 }
 
 .template-form-modal__subtitle {
-  color: var(--text-muted);
-  margin: 0;
+	color: var(--text-muted);
+	margin: 0;
 }
 
 .template-form-modal__form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 }
 
 .template-form-modal__field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
 .template-form-modal__input,
 .template-form-modal__textarea {
-  width: 100%;
+	width: 100%;
 }
 
 .template-form-modal__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.template-builder {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.template-builder__section {
+	margin-top: 4px;
+}
+
+.template-builder__fields {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.template-builder__field-row {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+	gap: 8px;
+	align-items: center;
+}
+
+.template-builder__input,
+.template-builder__select {
+	width: 100%;
+}
+
+@media (max-width: 640px) {
+	.template-builder__field-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-auto-rows: auto;
+	}
 }
