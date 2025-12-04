@@ -3,7 +3,7 @@
 	"name": "Template Forms",
 	"version": "1.0.1",
 	"minAppVersion": "1.10.6",
-	"description": "A form-based templating plugin for Obsidian",
+	"description": "A form-based templating plugin for notes creation.",
 	"author": "stbn1699",
 	"authorUrl": "https://github.com/stbn1699",
 	"isDesktopOnly": true
