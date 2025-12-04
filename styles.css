@@ -1,8 +1,71 @@
-/*
+.template-forms-root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.template-card {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  box-shadow: var(--shadow-s);
+}
 
-If your plugin does not need CSS, delete this file.
+.template-card h3 {
+  margin: 0 0 4px;
+}
 
-*/
+.template-card p {
+  margin: 0 0 8px;
+}
+
+.template-card button {
+  margin-top: 4px;
+}
+
+.template-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.template-form-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 360px;
+}
+
+.template-form-modal__header h3 {
+  margin-bottom: 4px;
+}
+
+.template-form-modal__subtitle {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.template-form-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.template-form-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.template-form-modal__input,
+.template-form-modal__textarea {
+  width: 100%;
+}
+
+.template-form-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
