@@ -2,6 +2,7 @@
 	"id": "templateForms",
 	"name": "Template Forms",
 	"version": "0.0.0",
+	"minAppVersion": "1.10.6",
 	"description": "A form-based templating plugin for Obsidian",
 	"author": "stbn1699",
 	"authorUrl": "https://github.com/stbn1699",
