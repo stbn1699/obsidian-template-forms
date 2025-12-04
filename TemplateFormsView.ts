@@ -10,6 +10,7 @@ interface RenderState {
   mode: "list" | "builder" | "use";
   selectedTemplate: TemplateDefinition | null;
   builderDraft: TemplateDefinition;
+  editingTemplateId: string | null;
 }
 
 const FIELD_TYPE_OPTIONS: { value: TemplateFieldType; label: string }[] = [
@@ -30,6 +31,7 @@ export default class TemplateFormsModal extends Modal {
       mode: "list",
       selectedTemplate: null,
       builderDraft: this.createEmptyTemplate(),
+      editingTemplateId: null,
     };
   }
 
@@ -43,6 +45,7 @@ export default class TemplateFormsModal extends Modal {
       mode: "list",
       selectedTemplate: null,
       builderDraft: this.createEmptyTemplate(),
+      editingTemplateId: null,
     };
   }
 
@@ -88,6 +91,7 @@ export default class TemplateFormsModal extends Modal {
         mode: "builder",
         selectedTemplate: null,
         builderDraft: this.createEmptyTemplate(),
+        editingTemplateId: null,
       };
       this.render();
     });
@@ -108,6 +112,18 @@ export default class TemplateFormsModal extends Modal {
           mode: "use",
           selectedTemplate: template,
           builderDraft: this.state.builderDraft,
+          editingTemplateId: null,
+        };
+        this.render();
+      });
+
+      const editButton = card.createEl("button", { text: "Modifier" });
+      editButton.addEventListener("click", () => {
+        this.state = {
+          mode: "builder",
+          selectedTemplate: null,
+          builderDraft: this.cloneTemplate(template),
+          editingTemplateId: template.id,
         };
         this.render();
       });
@@ -115,7 +131,9 @@ export default class TemplateFormsModal extends Modal {
   }
 
   private renderTemplateBuilder(root: HTMLElement): void {
-    root.createEl("h2", { text: "Créer un template" });
+    root.createEl("h2", {
+      text: this.state.editingTemplateId ? "Modifier le template" : "Créer un template",
+    });
     root.createEl("p", {
       text: "Ajoutez des champs puis composez le markdown en utilisant ${id_champ} pour insérer la valeur.",
       cls: "template-form-modal__subtitle",
@@ -234,12 +252,13 @@ export default class TemplateFormsModal extends Modal {
         mode: "list",
         selectedTemplate: null,
         builderDraft: this.state.builderDraft,
+        editingTemplateId: null,
       };
       this.render();
     });
 
     actions.createEl("button", {
-      text: "Enregistrer",
+      text: this.state.editingTemplateId ? "Mettre à jour" : "Enregistrer",
       type: "submit",
       cls: "mod-cta",
     });
@@ -338,11 +357,11 @@ export default class TemplateFormsModal extends Modal {
     }
 
     const normalizedId = this.slugify(name);
-    const uniqueId = this.ensureUniqueId(normalizedId);
+    const targetId = this.state.editingTemplateId ?? this.ensureUniqueId(normalizedId);
 
     const template: TemplateDefinition = {
       ...draft,
-      id: uniqueId,
+      id: targetId,
       name,
       description,
       fields: draft.fields.map((field) => ({ ...field })),
@@ -350,14 +369,28 @@ export default class TemplateFormsModal extends Modal {
       destinationFolder: useDestinationFolder ? destinationFolder : "",
     };
 
-    this.host.settings.templates.push(template);
+    if (this.state.editingTemplateId) {
+      const index = this.host.settings.templates.findIndex(
+        (tpl) => tpl.id === this.state.editingTemplateId
+      );
+      if (index !== -1) {
+        this.host.settings.templates.splice(index, 1, template);
+      }
+    } else {
+      this.host.settings.templates.push(template);
+    }
     await this.host.saveSettings();
-    new Notice(`Template "${template.name}" enregistré.`);
+    new Notice(
+      this.state.editingTemplateId
+        ? `Template "${template.name}" mis à jour.`
+        : `Template "${template.name}" enregistré.`
+    );
 
     this.state = {
       mode: "list",
       selectedTemplate: null,
       builderDraft: this.createEmptyTemplate(),
+      editingTemplateId: null,
     };
     this.render();
   }
@@ -444,6 +477,7 @@ export default class TemplateFormsModal extends Modal {
         mode: "list",
         selectedTemplate: null,
         builderDraft: this.state.builderDraft,
+        editingTemplateId: null,
       };
       this.render();
     });
@@ -490,6 +524,7 @@ export default class TemplateFormsModal extends Modal {
       mode: "list",
       selectedTemplate: null,
       builderDraft: this.state.builderDraft,
+      editingTemplateId: null,
     };
     this.render();
   }
@@ -535,5 +570,12 @@ export default class TemplateFormsModal extends Modal {
       .replace(/\p{Diacritic}/gu, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
+  }
+
+  private cloneTemplate(template: TemplateDefinition): TemplateDefinition {
+    return {
+      ...template,
+      fields: template.fields.map((field) => ({ ...field })),
+    };
   }
 }

@@ -16,7 +16,6 @@ export interface TemplateDefinition {
   description: string;
   fields: TemplateField[];
   body: string;
-  useDestinationFolder?: boolean;
   destinationFolder?: string;
 }
 
