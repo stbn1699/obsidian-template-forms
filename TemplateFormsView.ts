@@ -53,6 +53,8 @@ export default class TemplateFormsModal extends Modal {
       description: "",
       fields: [],
       body: "",
+      useDestinationFolder: false,
+      destinationFolder: "",
     };
   }
 
@@ -134,6 +136,49 @@ export default class TemplateFormsModal extends Modal {
       },
       this.state.builderDraft.description
     );
+
+    const destinationSection = form.createDiv({ cls: "template-builder__section" });
+    destinationSection.createEl("h3", { text: "Destination" });
+
+    const destinationToggle = destinationSection.createDiv({ cls: "template-form-modal__field" });
+    const destinationLabel = destinationToggle.createEl("label", {
+      text: "Définir un dossier de destination",
+      attr: { for: "template-destination-toggle" },
+    });
+    const destinationCheckbox = destinationToggle.createEl("input", {
+      type: "checkbox",
+      attr: { id: "template-destination-toggle" },
+    });
+    destinationCheckbox.checked = this.state.builderDraft.useDestinationFolder ?? false;
+    destinationCheckbox.addEventListener("change", (event) => {
+      const checked = (event.target as HTMLInputElement).checked;
+      this.state.builderDraft.useDestinationFolder = checked;
+      if (!checked) {
+        this.state.builderDraft.destinationFolder = "";
+      }
+      this.render();
+    });
+    destinationLabel.prepend(destinationCheckbox);
+
+    if (this.state.builderDraft.useDestinationFolder) {
+      const folderField = destinationSection.createDiv({ cls: "template-form-modal__field" });
+      folderField.createEl("label", {
+        text: "Dossier de destination",
+        attr: { for: "template-destination-folder" },
+      });
+      const folderInput = folderField.createEl("input", {
+        type: "text",
+        attr: {
+          id: "template-destination-folder",
+          value: this.state.builderDraft.destinationFolder ?? "",
+          placeholder: "ex: Notes/Templates",
+        },
+        cls: "template-form-modal__input",
+      });
+      folderInput.addEventListener("input", (event) => {
+        this.state.builderDraft.destinationFolder = (event.target as HTMLInputElement).value;
+      });
+    }
 
     const fieldsHeader = form.createDiv({ cls: "template-builder__section" });
     fieldsHeader.createEl("h3", { text: "Champs" });
@@ -280,8 +325,15 @@ export default class TemplateFormsModal extends Modal {
     const draft = this.state.builderDraft;
     const name = draft.name.trim();
     const description = draft.description.trim();
+    const useDestinationFolder = draft.useDestinationFolder ?? false;
+    const destinationFolder = draft.destinationFolder?.trim() ?? "";
     if (!name) {
       new Notice("Le nom du template est requis.");
+      return;
+    }
+
+    if (useDestinationFolder && !destinationFolder) {
+      new Notice("Indiquez un dossier de destination ou désactivez l'option correspondante.");
       return;
     }
 
@@ -294,6 +346,8 @@ export default class TemplateFormsModal extends Modal {
       name,
       description,
       fields: draft.fields.map((field) => ({ ...field })),
+      useDestinationFolder,
+      destinationFolder: useDestinationFolder ? destinationFolder : "",
     };
 
     this.host.settings.templates.push(template);
@@ -341,6 +395,24 @@ export default class TemplateFormsModal extends Modal {
       },
       cls: "template-form-modal__input",
     });
+
+    const useDestinationFolder = template.useDestinationFolder ?? false;
+    if (useDestinationFolder) {
+      const destinationField = form.createDiv({ cls: "template-form-modal__field" });
+      destinationField.createEl("label", {
+        text: "Dossier de destination",
+        attr: { for: "template-destination-folder" },
+      });
+      destinationField.createEl("input", {
+        type: "text",
+        attr: {
+          id: "template-destination-folder",
+          value: template.destinationFolder ?? "",
+          placeholder: "ex: Notes/Templates",
+        },
+        cls: "template-form-modal__input",
+      });
+    }
 
     template.fields.forEach((field) => {
       const wrapper = form.createDiv({ cls: "template-form-modal__field" });
@@ -400,9 +472,18 @@ export default class TemplateFormsModal extends Modal {
       values[field.id] = (input?.value ?? textarea?.value ?? "").trim();
     });
 
-    const content = this.renderTemplateBody(template.body, values);
-    const path = this.getAvailablePath(filename.trim() || template.name);
+    const useDestinationFolder = template.useDestinationFolder ?? false;
+    const destinationInput = form.querySelector<HTMLInputElement>("#template-destination-folder");
+    const destinationFolder = useDestinationFolder
+      ? destinationInput?.value.trim() || template.destinationFolder || ""
+      : "";
 
+    const content = this.renderTemplateBody(template.body, values);
+    const path = this.getAvailablePath(filename.trim() || template.name, destinationFolder);
+
+    if (destinationFolder) {
+      await this.ensureFolderExists(destinationFolder);
+    }
     await this.host.app.vault.create(path, content);
     new Notice(`Note créée: ${path}`);
     this.state = {
@@ -419,20 +500,31 @@ export default class TemplateFormsModal extends Modal {
     });
   }
 
-  private getAvailablePath(baseName: string): string {
+  private getAvailablePath(baseName: string, folderPath?: string): string {
     const safeName = baseName || "nouvelle-note";
-    const normalized = normalizePath(`${safeName}.md`);
+    const folder = folderPath?.trim() ? normalizePath(folderPath.trim()) : "";
+    const prefix = folder ? `${folder}/` : "";
+
+    const normalized = normalizePath(`${prefix}${safeName}.md`);
     if (!this.host.app.vault.getAbstractFileByPath(normalized)) {
       return normalized;
     }
 
     let index = 1;
     while (true) {
-      const candidate = normalizePath(`${safeName} ${index}.md`);
+      const candidate = normalizePath(`${prefix}${safeName} ${index}.md`);
       if (!this.host.app.vault.getAbstractFileByPath(candidate)) {
         return candidate;
       }
       index += 1;
+    }
+  }
+
+  private async ensureFolderExists(folderPath: string): Promise<void> {
+    const normalized = normalizePath(folderPath);
+    const existing = this.host.app.vault.getAbstractFileByPath(normalized);
+    if (!existing) {
+      await this.host.app.vault.createFolder(normalized);
     }
   }
 

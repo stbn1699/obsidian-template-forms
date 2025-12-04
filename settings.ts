@@ -10,11 +10,14 @@ export interface TemplateField {
 }
 
 export interface TemplateDefinition {
+  useDestinationFolder: boolean;
   id: string;
   name: string;
   description: string;
   fields: TemplateField[];
   body: string;
+  useDestinationFolder?: boolean;
+  destinationFolder?: string;
 }
 
 export interface TemplateFormsSettings {
