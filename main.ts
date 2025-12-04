@@ -10,7 +10,7 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
 
-export default class MyPlugin extends Plugin {
+export default class TemplateFormsPlugin extends Plugin {
 	settings: MyPluginSettings;
 
 	async onload() {
@@ -108,9 +108,9 @@ class SampleModal extends Modal {
 }
 
 class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+	plugin: TemplateFormsPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: TemplateFormsPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
