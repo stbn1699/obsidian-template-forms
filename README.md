@@ -49,6 +49,7 @@ At this stage, the plugin includes:
   - `${time}` (HH:mm)
   - `${datetime}` (ISO string)
   - These variables can also be used for filenames and destination folders, with optional formatting such as `${date:YY-MM-DD}`
+  - Formatting also supports French month names with `MMM` (`Janv.`…`Déc.`) and `MMMM` (`Janvier`…`Décembre`), allowing patterns like `${date:MM-MMMM}` → `12-Décembre`
 - Set a default filename pattern per template (for example `journal-${date:YY-MM-DD}`)
 
 More features will be added gradually.

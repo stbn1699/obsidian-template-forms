@@ -14,6 +14,36 @@ interface RenderState {
   editingTemplateId: string | null;
 }
 
+const MONTH_NAMES = [
+  "Janvier",
+  "Février",
+  "Mars",
+  "Avril",
+  "Mai",
+  "Juin",
+  "Juillet",
+  "Août",
+  "Septembre",
+  "Octobre",
+  "Novembre",
+  "Décembre",
+];
+
+const MONTH_NAMES_SHORT = [
+  "Janv.",
+  "Févr.",
+  "Mars",
+  "Avr.",
+  "Mai",
+  "Juin",
+  "Juil.",
+  "Août",
+  "Sept.",
+  "Oct.",
+  "Nov.",
+  "Déc.",
+];
+
 const FIELD_TYPE_OPTIONS: { value: TemplateFieldType; label: string }[] = [
   { value: "text", label: "Texte" },
   { value: "textarea", label: "Zone de texte" },
@@ -709,13 +739,18 @@ export default class TemplateFormsModal extends Modal {
       YYYY: date.getFullYear().toString(),
       YY: date.getFullYear().toString().slice(-2),
       MM: `${date.getMonth() + 1}`.padStart(2, "0"),
+      MMM: MONTH_NAMES_SHORT[date.getMonth()],
+      MMMM: MONTH_NAMES[date.getMonth()],
       DD: `${date.getDate()}`.padStart(2, "0"),
       HH: `${date.getHours()}`.padStart(2, "0"),
       mm: `${date.getMinutes()}`.padStart(2, "0"),
       ss: `${date.getSeconds()}`.padStart(2, "0"),
     };
 
-    return format.replace(/YYYY|YY|MM|DD|HH|mm|ss/g, (token) => tokens[token] ?? token);
+    return format.replace(
+      /YYYY|YY|MMMM|MMM|MM|DD|HH|mm|ss/g,
+      (token) => tokens[token] ?? token
+    );
   }
 
   private getAvailablePath(baseName: string, folderPath?: string): string {
