@@ -19,6 +19,7 @@ export interface TemplateDefinition {
   id: string;
   name: string;
   description: string;
+  defaultFilename?: string;
   fields: TemplateField[];
   computedVariables?: TemplateVariable[];
   body: string;

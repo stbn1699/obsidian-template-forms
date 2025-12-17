@@ -48,7 +48,8 @@ At this stage, the plugin includes:
   - `${date}` (YYYY-MM-DD)
   - `${time}` (HH:mm)
   - `${datetime}` (ISO string)
-  - These variables can also be used for filenames and destination folders
+  - These variables can also be used for filenames and destination folders, with optional formatting such as `${date:YY-MM-DD}`
+- Set a default filename pattern per template (for example `journal-${date:YY-MM-DD}`)
 
 More features will be added gradually.
 

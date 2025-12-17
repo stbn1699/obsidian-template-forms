@@ -55,6 +55,7 @@ export default class TemplateFormsModal extends Modal {
       id: "",
       name: "",
       description: "",
+      defaultFilename: "",
       fields: [],
       computedVariables: [],
       body: "",
@@ -155,6 +156,16 @@ export default class TemplateFormsModal extends Modal {
         this.state.builderDraft.description = value;
       },
       this.state.builderDraft.description
+    );
+
+    this.createInputField(
+      form,
+      "Nom de fichier par défaut",
+      "template-default-filename",
+      (value) => {
+        this.state.builderDraft.defaultFilename = value;
+      },
+      this.state.builderDraft.defaultFilename ?? ""
     );
 
     const destinationSection = form.createDiv({ cls: "template-builder__section" });
@@ -482,6 +493,15 @@ export default class TemplateFormsModal extends Modal {
 
     const form = root.createEl("form", { cls: "template-form-modal__form" });
 
+    const dateContext = new Date();
+    const builtInValues = this.getBuiltInVariables(dateContext);
+    const defaultFilename = (template.defaultFilename ?? template.name).trim();
+    const resolvedDefaultFilename = this.renderTemplateString(
+      defaultFilename,
+      builtInValues,
+      dateContext
+    );
+
     const filenameField = form.createDiv({ cls: "template-form-modal__field" });
     filenameField.createEl("label", {
       text: "Nom du fichier (sans extension)",
@@ -491,7 +511,7 @@ export default class TemplateFormsModal extends Modal {
       type: "text",
       attr: {
         id: "template-file-name",
-        value: template.name,
+        value: resolvedDefaultFilename || template.name,
         placeholder: "Nom du fichier",
       },
       cls: "template-form-modal__input",
@@ -567,18 +587,21 @@ export default class TemplateFormsModal extends Modal {
     filename: string,
     form: HTMLElement
   ): Promise<void> {
-    const values = this.buildTemplateValues(template, form);
+    const dateContext = new Date();
+    const values = this.buildTemplateValues(template, form, dateContext);
     const useDestinationFolder = template.useDestinationFolder ?? false;
     const destinationInput = form.querySelector<HTMLInputElement>("#template-destination-folder");
     const destinationFolder = useDestinationFolder
       ? this.renderTemplateString(
           destinationInput?.value.trim() || template.destinationFolder || "",
-          values
+          values,
+          dateContext
         ).trim()
       : "";
 
-    const renderedFilename = this.renderTemplateString(filename, values).trim() || template.name;
-    const content = this.renderTemplateString(template.body, values);
+    const renderedFilename =
+      this.renderTemplateString(filename, values, dateContext).trim() || template.name;
+    const content = this.renderTemplateString(template.body, values, dateContext);
     const path = this.getAvailablePath(renderedFilename, destinationFolder);
 
     if (destinationFolder) {
@@ -597,9 +620,10 @@ export default class TemplateFormsModal extends Modal {
 
   private buildTemplateValues(
     template: TemplateDefinition,
-    form: HTMLElement
+    form: HTMLElement,
+    dateContext: Date
   ): Record<string, string> {
-    const values: Record<string, string> = { ...this.getBuiltInVariables() };
+    const values: Record<string, string> = { ...this.getBuiltInVariables(dateContext) };
 
     template.fields.forEach((field) => {
       const input = form.querySelector<HTMLInputElement>(`#${field.id}`);
@@ -608,12 +632,13 @@ export default class TemplateFormsModal extends Modal {
     });
 
     const computedVariables = template.computedVariables ?? [];
-    return this.resolveComputedVariables(values, computedVariables);
+    return this.resolveComputedVariables(values, computedVariables, dateContext);
   }
 
   private resolveComputedVariables(
     baseValues: Record<string, string>,
-    computedVariables: TemplateVariable[]
+    computedVariables: TemplateVariable[],
+    dateContext: Date
   ): Record<string, string> {
     const values = { ...baseValues };
     const iterations = Math.max(1, computedVariables.length * 3);
@@ -622,7 +647,7 @@ export default class TemplateFormsModal extends Modal {
       let updated = false;
 
       computedVariables.forEach((variable) => {
-        const resolved = this.renderTemplateString(variable.value, values);
+        const resolved = this.renderTemplateString(variable.value, values, dateContext);
         if (values[variable.id] !== resolved) {
           values[variable.id] = resolved;
           updated = true;
@@ -637,19 +662,60 @@ export default class TemplateFormsModal extends Modal {
     return values;
   }
 
-  private renderTemplateString(template: string, values: Record<string, string>): string {
-    return template.replace(/\$\{([^}]+)}/g, (_, fieldId: string) => {
-      return values[fieldId.trim()] ?? "";
+  private renderTemplateString(
+    template: string,
+    values: Record<string, string>,
+    dateContext: Date
+  ): string {
+    return template.replace(/\$\{([^}]+)}/g, (_, rawFieldId: string) => {
+      const [fieldId, format] = rawFieldId.split(":").map((part) => part.trim());
+      const value = values[fieldId] ?? "";
+
+      if (format) {
+        const parsedDate = this.parseDateValue(value, dateContext);
+        if (parsedDate) {
+          return this.formatDate(parsedDate, format);
+        }
+      }
+
+      return value;
     });
   }
 
-  private getBuiltInVariables(): Record<string, string> {
-    const now = new Date();
+  private getBuiltInVariables(dateContext: Date): Record<string, string> {
+    const now = dateContext;
     return {
       date: now.toISOString().slice(0, 10),
       time: now.toTimeString().slice(0, 5),
       datetime: now.toISOString(),
     };
+  }
+
+  private parseDateValue(value: string, fallback: Date): Date | null {
+    if (!value) {
+      return fallback;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  private formatDate(date: Date, format: string): string {
+    const tokens: Record<string, string> = {
+      YYYY: date.getFullYear().toString(),
+      YY: date.getFullYear().toString().slice(-2),
+      MM: `${date.getMonth() + 1}`.padStart(2, "0"),
+      DD: `${date.getDate()}`.padStart(2, "0"),
+      HH: `${date.getHours()}`.padStart(2, "0"),
+      mm: `${date.getMinutes()}`.padStart(2, "0"),
+      ss: `${date.getSeconds()}`.padStart(2, "0"),
+    };
+
+    return format.replace(/YYYY|YY|MM|DD|HH|mm|ss/g, (token) => tokens[token] ?? token);
   }
 
   private getAvailablePath(baseName: string, folderPath?: string): string {
@@ -692,6 +758,7 @@ export default class TemplateFormsModal extends Modal {
   private cloneTemplate(template: TemplateDefinition): TemplateDefinition {
     return {
       ...template,
+      defaultFilename: template.defaultFilename,
       fields: template.fields.map((field) => ({ ...field })),
       computedVariables: (template.computedVariables ?? []).map((variable) => ({ ...variable })),
     };
