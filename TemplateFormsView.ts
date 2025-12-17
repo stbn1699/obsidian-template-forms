@@ -3,6 +3,7 @@ import {
   TemplateDefinition,
   TemplateField,
   TemplateFieldType,
+  TemplateVariable,
   TemplateFormsHost,
 } from "./settings";
 
@@ -55,6 +56,7 @@ export default class TemplateFormsModal extends Modal {
       name: "",
       description: "",
       fields: [],
+      computedVariables: [],
       body: "",
       useDestinationFolder: false,
       destinationFolder: "",
@@ -222,6 +224,33 @@ export default class TemplateFormsModal extends Modal {
       this.render();
     });
 
+    const variablesSection = form.createDiv({ cls: "template-builder__section" });
+    variablesSection.createEl("h3", { text: "Variables automatiques" });
+    variablesSection.createEl("p", {
+      text: "Définissez des variables calculées à partir des champs ou des valeurs par défaut (par exemple ${date}).",
+      cls: "template-form-modal__subtitle",
+    });
+
+    const variablesContainer = variablesSection.createDiv({ cls: "template-builder__fields" });
+    (this.state.builderDraft.computedVariables ?? []).forEach((variable, index) => {
+      this.renderVariableEditor(variablesContainer, variable, index);
+    });
+
+    const addVariableButton = variablesSection.createEl("button", {
+      text: "Ajouter une variable",
+      type: "button",
+      cls: "mod-cta secondary",
+    });
+    addVariableButton.addEventListener("click", () => {
+      const variables = this.state.builderDraft.computedVariables ?? [];
+      variables.push({
+        id: `variable_${variables.length + 1}`,
+        value: "",
+      });
+      this.state.builderDraft.computedVariables = variables;
+      this.render();
+    });
+
     const bodyField = form.createDiv({ cls: "template-form-modal__field" });
     bodyField.createEl("label", {
       text: "Template (markdown)",
@@ -263,9 +292,47 @@ export default class TemplateFormsModal extends Modal {
       cls: "mod-cta",
     });
 
-	form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", (event) => {
       event.preventDefault();
       void this.saveTemplate();
+    });
+  }
+
+  private renderVariableEditor(
+    container: HTMLElement,
+    variable: TemplateVariable,
+    index: number
+  ): void {
+    const row = container.createDiv({ cls: "template-builder__field-row" });
+
+    const idInput = row.createEl("input", {
+      type: "text",
+      attr: { value: variable.id, placeholder: "Identifiant" },
+      cls: "template-builder__input",
+    });
+    idInput.addEventListener("input", (event) => {
+      variable.id = (event.target as HTMLInputElement).value;
+    });
+
+    const valueInput = row.createEl("input", {
+      type: "text",
+      attr: { value: variable.value, placeholder: "Valeur (peut inclure ${id})" },
+      cls: "template-builder__input",
+    });
+    valueInput.addEventListener("input", (event) => {
+      variable.value = (event.target as HTMLInputElement).value;
+    });
+
+    const removeButton = row.createEl("button", {
+      text: "Supprimer",
+      type: "button",
+      cls: "mod-cta secondary",
+    });
+    removeButton.addEventListener("click", () => {
+      const variables = this.state.builderDraft.computedVariables ?? [];
+      variables.splice(index, 1);
+      this.state.builderDraft.computedVariables = variables;
+      this.render();
     });
   }
 
@@ -365,6 +432,7 @@ export default class TemplateFormsModal extends Modal {
       name,
       description,
       fields: draft.fields.map((field) => ({ ...field })),
+      computedVariables: (draft.computedVariables ?? []).map((variable) => ({ ...variable })),
       useDestinationFolder,
       destinationFolder: useDestinationFolder ? destinationFolder : "",
     };
@@ -499,21 +567,19 @@ export default class TemplateFormsModal extends Modal {
     filename: string,
     form: HTMLElement
   ): Promise<void> {
-    const values: Record<string, string> = {};
-    template.fields.forEach((field) => {
-      const input = form.querySelector<HTMLInputElement>(`#${field.id}`);
-      const textarea = form.querySelector<HTMLTextAreaElement>(`#${field.id}`);
-      values[field.id] = (input?.value ?? textarea?.value ?? "").trim();
-    });
-
+    const values = this.buildTemplateValues(template, form);
     const useDestinationFolder = template.useDestinationFolder ?? false;
     const destinationInput = form.querySelector<HTMLInputElement>("#template-destination-folder");
     const destinationFolder = useDestinationFolder
-      ? destinationInput?.value.trim() || template.destinationFolder || ""
+      ? this.renderTemplateString(
+          destinationInput?.value.trim() || template.destinationFolder || "",
+          values
+        ).trim()
       : "";
 
-    const content = this.renderTemplateBody(template.body, values);
-    const path = this.getAvailablePath(filename.trim() || template.name, destinationFolder);
+    const renderedFilename = this.renderTemplateString(filename, values).trim() || template.name;
+    const content = this.renderTemplateString(template.body, values);
+    const path = this.getAvailablePath(renderedFilename, destinationFolder);
 
     if (destinationFolder) {
       await this.ensureFolderExists(destinationFolder);
@@ -529,10 +595,61 @@ export default class TemplateFormsModal extends Modal {
     this.render();
   }
 
-  private renderTemplateBody(body: string, values: Record<string, string>): string {
-    return body.replace(/\$\{([^}]+)\}/g, (_, fieldId: string) => {
-      return values[fieldId] ?? "";
+  private buildTemplateValues(
+    template: TemplateDefinition,
+    form: HTMLElement
+  ): Record<string, string> {
+    const values: Record<string, string> = { ...this.getBuiltInVariables() };
+
+    template.fields.forEach((field) => {
+      const input = form.querySelector<HTMLInputElement>(`#${field.id}`);
+      const textarea = form.querySelector<HTMLTextAreaElement>(`#${field.id}`);
+      values[field.id] = (input?.value ?? textarea?.value ?? "").trim();
     });
+
+    const computedVariables = template.computedVariables ?? [];
+    return this.resolveComputedVariables(values, computedVariables);
+  }
+
+  private resolveComputedVariables(
+    baseValues: Record<string, string>,
+    computedVariables: TemplateVariable[]
+  ): Record<string, string> {
+    const values = { ...baseValues };
+    const iterations = Math.max(1, computedVariables.length * 3);
+
+    for (let i = 0; i < iterations; i += 1) {
+      let updated = false;
+
+      computedVariables.forEach((variable) => {
+        const resolved = this.renderTemplateString(variable.value, values);
+        if (values[variable.id] !== resolved) {
+          values[variable.id] = resolved;
+          updated = true;
+        }
+      });
+
+      if (!updated) {
+        break;
+      }
+    }
+
+    return values;
+  }
+
+  private renderTemplateString(template: string, values: Record<string, string>): string {
+    return template.replace(/\$\{([^}]+)}/g, (_, fieldId: string) => {
+      return values[fieldId.trim()] ?? "";
+    });
+  }
+
+  private getBuiltInVariables(): Record<string, string> {
+    const now = new Date();
+    return {
+      date: now.toISOString().slice(0, 10),
+      time: now.toTimeString().slice(0, 5),
+      datetime: now.toISOString(),
+    };
   }
 
   private getAvailablePath(baseName: string, folderPath?: string): string {
@@ -576,6 +693,7 @@ export default class TemplateFormsModal extends Modal {
     return {
       ...template,
       fields: template.fields.map((field) => ({ ...field })),
+      computedVariables: (template.computedVariables ?? []).map((variable) => ({ ...variable })),
     };
   }
 }

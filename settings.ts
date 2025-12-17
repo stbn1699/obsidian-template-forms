@@ -9,12 +9,18 @@ export interface TemplateField {
   placeholder: string;
 }
 
+export interface TemplateVariable {
+  id: string;
+  value: string;
+}
+
 export interface TemplateDefinition {
   useDestinationFolder: boolean;
   id: string;
   name: string;
   description: string;
   fields: TemplateField[];
+  computedVariables?: TemplateVariable[];
   body: string;
   destinationFolder?: string;
 }

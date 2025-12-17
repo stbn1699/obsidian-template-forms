@@ -35,9 +35,20 @@ Most features are not implemented yet.**
 At this stage, the plugin includes:
 
 - Basic project setup (TypeScript, Obsidian API)
-- Manifest configuration  
-- Skeleton plugin activation  
-- Development environment ready for expansion  
+- Manifest configuration
+- Skeleton plugin activation
+- Development environment ready for expansion
+
+### Available features
+
+- Create templates with text, number, textarea, and date fields
+- Insert field values in the markdown body with the syntax `${id}`
+- Define automatic variables that can reuse other fields (example: `nomPrenom` with value `${nom} ${prenom}`)
+- Built-in variables available everywhere:
+  - `${date}` (YYYY-MM-DD)
+  - `${time}` (HH:mm)
+  - `${datetime}` (ISO string)
+  - These variables can also be used for filenames and destination folders
 
 More features will be added gradually.
 
